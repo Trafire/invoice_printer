@@ -19,8 +19,9 @@ def print_data(m):
     pdf_attachement = ''
     att_filename = None
     for att in m.Attachments:
-        ensure_dir("D:\PycharmProjects\invoice_printer\invoices\\" + m.Sender())
-        att_filename ="D:\PycharmProjects\invoice_printer\invoices\\" + m.Sender() +"\\" + date + "-"+str(att)
+        current_director = os.getcwd() + "\\" + m.Sender()
+        ensure_dir(current_director)
+        att_filename =current_director +"\\" + date + "-"+str(att)
         print(att_filename)
         att.SaveAsFile(att_filename)
         if '.pdf' in att_filename:
@@ -143,6 +144,8 @@ inbox = outlook.GetDefaultFolder(6) # "6" refers to the index of a folder - in t
                                     
 messages = inbox.Items
 messages.Sort("[ReceivedTime]", True)
+
+
 
 
 
