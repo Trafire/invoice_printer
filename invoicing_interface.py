@@ -63,12 +63,12 @@ class InvoicePrinter:
         os.startfile(self.val_filename)
     def update_invoice(self):
         print_report.update_files()
-        find_invoices.update(1000)
+        find_invoices.update(500)
     def view_report(self):
         self.get_values()
         print_report.run_distribution_report_screen(self.val_date, self.val_supplier)
-        
-          
+
+
 root = Tk()
 my_gui = InvoicePrinter(root)
 root.mainloop()

@@ -3,9 +3,9 @@ import io
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.utils import ImageReader
-import PIL.Image
+#import PIL.Image
 import os
-import time
+#import time
 
 def make_print_page(dated, invoices, date):
     packet = io.BytesIO()
@@ -59,7 +59,13 @@ def print_invoice(date, invoices, target ):
     # add the "watermark" (which is the new pdf) on the existing page
     page = existing_pdf.getPage(0)
     page.mergePage(new_pdf.getPage(0))
+
     output.addPage(page)
+
+    num_pages = existing_pdf.getNumPages()
+    for i in range(1,num_pages):
+        output.addPage(existing_pdf.getPage(i))
+
     # finally, write "output" to a real file
     count = 1
     destination = r"invoices\tmp\destination%s.pdf" % count
@@ -72,6 +78,53 @@ def print_invoice(date, invoices, target ):
     output.write(outputStream)
     outputStream.close()
     os.startfile(destination, "print")
+
+
+def save_invoice(date, invoices, target):
+    packet = io.BytesIO()
+    # create a new PDF with Reportlab
+    can = canvas.Canvas(packet, pagesize=letter)
+    can.setFont('Helvetica-Bold', 15)
+    can.drawString(450, 100, "Recieved")
+    can.drawString(450, 80, date)
+    sig = ImageReader('signature.gif')
+    can.drawImage(sig, 200, 60, mask='auto')
+
+    if invoices:
+        can.drawString(100, 100, "invoice #")
+        can.setFont('Helvetica-Bold', 10)
+        can.drawString(100, 80, invoices)
+    can.showPage()
+    can.save()
+
+    # move to the beginning of the StringIO buffer
+    packet.seek(0)
+    new_pdf = PdfFileReader(packet)
+    # read your existing PDF
+    existing_pdf = PdfFileReader(open(target, "rb"))
+    output = PdfFileWriter()
+    # add the "watermark" (which is the new pdf) on the existing page
+    page = existing_pdf.getPage(0)
+    page.mergePage(new_pdf.getPage(0))
+
+    output.addPage(page)
+
+    num_pages = existing_pdf.getNumPages()
+    for i in range(1, num_pages):
+        output.addPage(existing_pdf.getPage(i))
+
+    # finally, write "output" to a real file
+    count = 1
+    destination = r"invoices\tmp\destination%s.pdf" % count
+    while os.path.isfile(destination):
+        count += 1
+        destination = r"invoices\tmp\destination%s.pdf" % count
+
+    outputStream = open(destination, "wb")
+    output.write(outputStream)
+    outputStream.close()
+    return destination
+
 '''
 def invoice_sign(date, invoices_nums, target):
     make_print_page(date, invoices_nums)

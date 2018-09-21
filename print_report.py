@@ -1,14 +1,19 @@
 import pickle
 import win32com.client
-
+import os
 from autof2.dailytasks import purchase_distribution
 import time
-import find_invoices, signatures
+from autof2.invoice_printer import find_invoices, signatures
+from datetime import datetime
 
+from PyPDF2 import PdfFileWriter, PdfFileReader
 
 def get_data():
-    with open("data.pic", 'rb') as data_file:
-        return pickle.load(data_file)
+    try:
+        with open("data.pic", 'rb') as data_file:
+            return pickle.load(data_file)
+    except:
+        return {}
 
 def save_data(data):
     with open("data.pic", 'wb') as data_file:
@@ -22,7 +27,7 @@ def get_invoice_nums(date, supplier):
         invoices.add(line["invoice_num"])
     text = ''
     for i in invoices:
-        text += i + ", "
+        text += str(i) + ", "
     return text.strip().strip(',')
 
 def update_data(date, supplier, invoice_num, filename, distribution_report=None):
@@ -34,7 +39,6 @@ def update_data(date, supplier, invoice_num, filename, distribution_report=None)
     record = {"invoice_num": invoice_num, "filename": filename}
     for r in data[date][supplier]:
         if r["invoice_num"] == invoice_num:
-            print("here")
             if distribution_report:
                 r["distribution_report"] = distribution_report
                 save_data(data)
@@ -85,23 +89,55 @@ def print_total(date, supplier, filename):
             report = i['distribution_filename']
             break
 
+        #else:
+            #print("no dist")
     if report:
         invoices = str(get_invoice_nums(date, supplier))
-        signatures.print_invoice(date, invoices, filename)
-        time.sleep(.1)
-        signatures.print_invoice(date, invoices, report)
+        if '/' in date:
+            date = datetime.strptime(date, "%d/%m/%y").strftime("%m/%d/%y") #need to print in m/d/y but F2 takes d/m/y
+        else:
+            date = datetime.strptime(date, "%d%m%y").strftime("%m/%d/%y")  # need to print in m/d/y but F2 takes d/m/y
+        i = signatures.save_invoice(date, invoices, filename)
+        d = signatures.save_invoice(date, invoices, report)
+        print_combine_invoice_report(i, d)
+        return True
+    return False
 
 def run_distribution_report_screen(date, supplier):
     purchase_distribution.run_distribution_report(date,supplier)
     
-        
-    
+def print_combine_invoice_report(invoice, report):
+    output = PdfFileWriter()
+    docs = (invoice, report)
+    for d in docs:
+        existing_pdf = PdfFileReader(open(d, "rb"))
+        num_pages = existing_pdf.getNumPages()
+        for i in range(num_pages):
+            output.addPage(existing_pdf.getPage(i))
+    count = 1
+    destination = r"D:\PycharmProjects\invoice_printer\invoices\tmp\compiled%s.pdf" % count
+    while os.path.exists(destination):
+        count += 1
+        destination = r"D:\PycharmProjects\invoice_printer\invoices\tmp\compiled%s.pdf" % count
+    # finally, write "output" to a real file
+    outputStream = open(destination, "wb")
+    output.write(outputStream)
+    outputStream.close()
+    time.sleep(.1)
+    while not os.path.exists(destination):
+        time.sleep(.5)
+
+    time.sleep(.5)
+    os.startfile(destination, "print")
+    return destination
+
+
 #date =  '04/04/18'
 #supplier = 'CAROPR'
 #filename = r"\invoices\Rosaprima International, LLC\31-03-18-Invoice #266132.pdf"
     
     
-#print_total(date, supplier, filename)    
+#rint_total(date, supplier, filename)
                 
             
         
